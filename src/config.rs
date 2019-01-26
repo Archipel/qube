@@ -3,7 +3,6 @@
 // Lifted from https://github.com/camallo/k8s-client-rs/blob/master/src/kubeconfig.rs
 // until a more complete kubernetes client exists
 
-use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -214,7 +213,7 @@ impl KubeConfig {
     }
 
     pub fn default_path() -> PathBuf {
-        env::home_dir()
+        dirs::home_dir()
             .unwrap_or("/root".into())
             .join(".kube")
             .join("config")

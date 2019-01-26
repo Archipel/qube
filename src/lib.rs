@@ -45,6 +45,7 @@ extern crate futures;
 extern crate tokio;
 extern crate colored;
 extern crate rand;
+extern crate dirs;
 
 pub mod errors;
 pub mod config;

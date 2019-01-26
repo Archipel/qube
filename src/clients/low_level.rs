@@ -1,6 +1,5 @@
 use reqwest::{self, header, StatusCode};
 use std::path::Path;
-use std::mem;
 use config::KubeConfig;
 use config::AuthInfo;
 use resources::*;
@@ -16,8 +15,7 @@ use std::borrow::Borrow;
 use walkdir::WalkDir;
 use errors::*;
 use k8s_api::apimachinery::pkg::apis::meta::v1::ObjectMeta;
-use reqwest::async::{Client, Decoder};
-use std::io::{self, Cursor, Write};
+use std::io::{self, Write};
 use futures::{Future, Stream};
 use colored::*;
 use rand::Rng;
@@ -59,17 +57,17 @@ impl KubeLowLevel {
 
         let cluster = context.cluster;
 
-        let mut headers = header::HeaderMap::new();
-        let mut headers_async = header::HeaderMap::new();
-        let mut client = reqwest::Client::builder();
-        let mut async_client = reqwest::async::Client::builder();
+        let headers = header::HeaderMap::new();
+        let headers_async = header::HeaderMap::new();
+        let client = reqwest::Client::builder();
+        let async_client = reqwest::async::Client::builder();
 
-        let mut client = if let Some(ca_cert) = cluster.ca_cert() {
+        let client = if let Some(ca_cert) = cluster.ca_cert() {
             let req_ca_cert = reqwest::Certificate::from_der(&ca_cert.to_der().unwrap()).unwrap();
             client.add_root_certificate(req_ca_cert)
         } else { client };
 
-        let mut async_client = if let Some(ca_cert) = cluster.ca_cert() {
+        let async_client = if let Some(ca_cert) = cluster.ca_cert() {
             let req_ca_cert = reqwest::Certificate::from_der(&ca_cert.to_der().unwrap()).unwrap();
             async_client.add_root_certificate(req_ca_cert)
         } else { async_client };
@@ -329,13 +327,13 @@ impl KubeLowLevel {
             String::from("white")
         ];
 
-        let mut req = self.auth_async(self.async_client.get(url));
+        let req = self.auth_async(self.async_client.get(url));
 
         // println!("URL: {:?}", req);
 
-        let mut response = req
+        let response = req
             .send()
-            .and_then(move |mut res| {
+            .and_then(move |res| {
                 let name = format!("{} ::⇒ ", resource);
                 let color = thread_rng().choose(&colors).unwrap();
                 let resname = name.color(color.to_string());
@@ -361,7 +359,7 @@ impl KubeLowLevel {
     }
 
     pub(crate) fn http_get(&self, url: Url) -> Result<reqwest::Response> {
-        let mut req = self.auth(self.client.get(url));
+        let req = self.auth(self.client.get(url));
 
         let mut response = req.send().chain_err(|| "Failed to GET URL")?;
 
