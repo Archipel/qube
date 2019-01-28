@@ -86,10 +86,10 @@ pub struct Status {
 
 #[derive(Clone, Debug, Default)]
 pub struct ListQuery {
-    field_selector: Option<String>,
-    label_selector: Option<String>,
-    resource_version: Option<String>,
-    timeout_seconds: Option<String>,
+    pub field_selector: Option<String>,
+    pub label_selector: Option<String>,
+    pub resource_version: Option<String>,
+    pub timeout_seconds: Option<String>,
 }
 
 impl ListQuery {
