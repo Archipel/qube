@@ -221,11 +221,12 @@ impl KubeLowLevel {
             })
             .map(|entry| handler(entry.path()))
             .collect()
+
     }
 
     // TODO: This function could use a serious refactoring
     pub(crate) fn apply_file<D>(&self, path: &Path) -> Result<D>
-    where D: DeserializeOwned + ::std::fmt::Debug
+        where D: DeserializeOwned + ::std::fmt::Debug
     {
         let mut bytes = Vec::new();
         let ext = path.extension().unwrap().to_string_lossy().to_lowercase();
@@ -236,6 +237,13 @@ impl KubeLowLevel {
             "yaml" => serde_yaml::from_slice(&bytes)?,
             _ => unreachable!("kubeclient bug: unexpected and unfiltered file extension"),
         };
+
+        self.apply_json(body)
+    }
+
+    pub(crate) fn apply_json<D>(&self, body : Value) -> Result<D>
+    where D: DeserializeOwned + ::std::fmt::Debug
+    {
         let mini: MinimalResource = serde_json::from_value(body.clone())?;
 
         let root = if mini.api_version.starts_with("v") {
@@ -248,21 +256,19 @@ impl KubeLowLevel {
             Some(ns) => format!("{}/{}/namespaces/{}/{}", root, mini.api_version, ns, mini.kind.plural),
             None =>format!("{}/{}/{}", root, mini.api_version, mini.kind.plural),
         };
-        let kind_url = self.base_url.join(&kind_path)?;
         let resource_url = self.base_url.join(&format!("{}/{}", kind_path, name))?;
-
-        // First check if resource already exists
-        let mut response = self.auth(self.client.get(resource_url)).send()
+        let mut response = self.auth(self.client.get(resource_url.clone())).send()
             .chain_err(|| "Failed to GET URL")?;
         match response.status() {
-            // Apply if resource doesn't exist
+            // Post if resource doesn't exist
             StatusCode::NOT_FOUND => {
+                let kind_url = self.base_url.join(&kind_path)?;
                 let resp = self.http_post_json(kind_url, &body)?;
                 Ok(resp)
             }
-            // Return it if it already exists
+            // Patch it if it already exists
             s if s.is_success() => {
-                let resp = response.json().chain_err(|| "Failed to decode JSON response")?;
+                let resp = self.http_patch_json(resource_url, &body)?;
                 Ok(resp)
             }
             // Propogate any other error
@@ -395,6 +401,27 @@ impl KubeLowLevel {
             .json(&body)
             .send()
             .chain_err(|| "Failed to POST URL")?;
+
+        if !response.status().is_success() {
+            let status: Status = response.json()
+                .chain_err(|| "Failed to decode kubernetes error response as 'Status'")?;
+            bail!(format!("Kubernetes API error: {}", status.message));
+        }
+
+        Ok(response.json().chain_err(|| "Failed to decode JSON response")?)
+    }
+
+    pub(crate) fn http_patch_json<S, D>(&self, url: Url, body: &S) -> Result<D>
+        where S: Serialize,
+              D: DeserializeOwned,
+    {
+        let mut req = self.auth(self.client.patch(url)).json(&body).build()?;
+        {
+            let headers = req.headers_mut();
+            headers.remove("content-type");
+            headers.insert("content-type", reqwest::header::HeaderValue::from_static("application/merge-patch+json"));
+        }
+        let mut response =  self.client.execute(req).chain_err(|| "Failed to PATCH URL")?;
 
         if !response.status().is_success() {
             let status: Status = response.json()

@@ -235,6 +235,11 @@ impl Kubernetes {
         Ok(())
     }
 
+    pub fn apply_json(&self, body: Value) -> Result<serde_json::Value> {
+        let rv: Value = self.low_level.apply_json(body)?;
+        Ok(rv)
+    }
+
     /// Replaces a JSON or YAML resource file
     ///
     /// This is similar to the `kubectl replace` CLI commands.
