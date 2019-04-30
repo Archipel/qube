@@ -350,7 +350,7 @@ impl KubeLowLevel {
                         let stdout = io::stdout();
                         let mut handle = stdout.lock();
 
-                        let data = format!("{}{}\n", resname, from_utf8(&chunk).unwrap().trim_right());
+                        let data = format!("{}{}\n", resname, from_utf8(&chunk).unwrap().trim_end());
 
                         handle
                             .write_all(&data.as_bytes())
