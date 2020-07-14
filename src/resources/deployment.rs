@@ -6,7 +6,7 @@ use k8s_api::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 pub(crate) static DEPLOYMENT_INFO: KindInfo = KindInfo {
     plural: "deployments",
     default_namespace: Some("default"),
-    api: V1_BETA_API,
+    api: "/apis/apps/v1",
 };
 
 #[derive(Serialize, Deserialize, Debug, Default)]
